@@ -1,0 +1,56 @@
+=head1 NAME
+
+mag3110d -  read magnetic field from MAG3110 using i2c
+
+=head1 SYNOPSIS
+
+B<mag3110d> 
+
+=head1 DESCRIPTION
+
+The B<mag3110d> is used to read magnetic field data from MAG3110 on 
+Raspberry Pi using i2c bus. The daemon is started with command 
+
+B<service> I<mag3110d> I<start>
+
+and can be stopped any time with
+
+B<service> I<mag3110d> I<stop>
+
+The operation of the daemon can be checked from the log file.
+
+=head1 FILES
+
+I</etc/mag3110d_config>             Configuration file. 
+
+I</etc/logrotate.d/mag3110d>        Log rotation configuration file.
+
+I</etc/init.d/mag3110d>             Init script.
+
+I</usr/sbin/mag3110d>               Daemon code.
+
+I</var/lib/mag3110d/Bx>             Live field x component.
+
+I</var/lib/mag3110d/By>             Live field y component.
+
+I</var/lib/mag3110d/Bz>             Live field z component.
+
+I</var/lib/mag3110d/temperature>    Live temperature value.
+
+I</var/log/mag3110d.log>            Log file.
+
+I</var/run/mag3110d.pid>            PID file.
+
+=head1 WARNING
+
+No check is done where the query data is written. Could make some hardware 
+unusable.
+
+=head1 AUTHORS
+
+Jaakko Koivuniemi 
+
+=head1 SEE ALSO
+
+i2cdetect(8), i2cset(8), i2cget(8)
+

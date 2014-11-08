@@ -1,0 +1,35 @@
+#
+# Example configuration file for mag3110d 
+# Fri Nov  7 21:26:46 CET 2014
+# Edit: 
+# Jaakko Koivuniemi
+
+# log level 0=debug messages, 1=system commands, 2=operation messages, 
+# 3=status messages, 4=errors/warnings
+LOGLEVEL 3
+
+# initial value for CTRL_REG1
+CTRL_REG1 0xF8
+
+# initial value for CTRL_REG2
+CTRL_REG2 0x80
+
+# Bx offset -10000 - +10000
+#OFF_X 0
+
+# By offset -10000 - +10000
+#OFF_Y 0
+
+# Bz offset -10000 - +10000
+#OFF_Z 0
+
+# magnetic field reading interval [s]
+MAGNINT 60
+
+# delay after trigger before reading [s]
+TDELAY 15
+
+# temperature reading interval [s]
+TEMPINT 300
+
+
