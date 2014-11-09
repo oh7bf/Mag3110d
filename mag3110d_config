@@ -32,4 +32,6 @@ TDELAY 15
 # temperature reading interval [s]
 TEMPINT 300
 
+# temperature offset [C]
+#TOFFSET -27
 

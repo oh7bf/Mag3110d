@@ -20,7 +20,7 @@
  ****************************************************************************
  *
  * Mon Nov  3 21:20:26 CET 2014
- * Edit: Sat Nov  8 21:14:53 CET 2014
+ * Edit: Sun Nov  9 19:14:57 CET 2014
  *
  * Jaakko Koivuniemi
  **/
@@ -38,7 +38,7 @@
 #include <time.h>
 #include <signal.h>
 
-const int version=20141108; // program version
+const int version=20141109; // program version
 int tempint=0; // temperature reading interval
 int magnint=300; // field reading interval [s]
 
@@ -62,6 +62,7 @@ char message[200]="";
 
 short Bx=0,By=0,Bz=0; // magnetic field [0.1 uT]
 short xoffset=0,yoffset=0,zoffset=0; // magnetic field offset [0.1 uT]
+signed char toffset=0; // temperature offset [C]
 unsigned char ctrlreg1=0; // CTRL_REG1
 unsigned char ctrlreg2=0; // CTRL_REG2
 int tdelay=15; // delay to wait after trigger before reading [s]
@@ -172,6 +173,12 @@ void read_config()
              sprintf(message,"Temperature reading interval set to %d s",(int)value);
              logmessage(logfile,message,loglev,4);
           }
+          if(strncmp(par,"TOFFSET",7)==0)
+          {
+             toffset=(signed char)value;
+             sprintf(message,"Temperature offset set to %d",(int)value);
+             logmessage(logfile,message,loglev,4);
+          }
        }
     }
     fclose(cfile);
@@ -223,7 +230,6 @@ int write_register(unsigned char reg, unsigned char value)
     close(fd);
     return -3;
   }
-
   if((write(fd, buf, 2)) != 2) 
   {
     sprintf(message,"Error writing to i2c slave");
@@ -231,12 +237,69 @@ int write_register(unsigned char reg, unsigned char value)
     close(fd);
     return -4;
   }
-
   cont=1;
   close(fd);
 
   return 1;
 }
+
+int write_vector(unsigned char reg, short *xval, short *yval, short *zval)
+{
+  int fd,rd;
+  int cnt=0;
+  unsigned char buf[10];
+
+  if((fd=open(i2cdev, O_RDWR)) < 0) 
+  {
+    sprintf(message,"Failed to open i2c port");
+    logmessage(logfile,message,loglev,4);
+    return -1;
+  }
+  rd=flock(fd, LOCK_EX|LOCK_NB);
+  cnt=i2lockmax;
+  while((rd==1)&&(cnt>0)) // try again if port locking failed
+  {
+    sleep(1);
+    rd=flock(fd, LOCK_EX|LOCK_NB);
+    cnt--;
+  }
+  if(rd)
+  {
+    sprintf(message,"Failed to lock i2c port");
+    logmessage(logfile,message,loglev,4);
+    close(fd);
+    return -2;
+  }
+
+  cont=0;
+  buf[0]=reg;
+  buf[1]=(unsigned char)(*xval>>8);
+  buf[2]=(unsigned char)(*xval&0x00FF);
+  buf[3]=(unsigned char)(*yval>>8);
+  buf[4]=(unsigned char)(*yval&0x00FF);
+  buf[5]=(unsigned char)(*zval>>8);
+  buf[6]=(unsigned char)(*zval&0x00FF);
+
+  if(ioctl(fd, I2C_SLAVE, address) < 0) 
+  {
+    sprintf(message,"Unable to get bus access to talk to slave");
+    logmessage(logfile,message,loglev,4);
+    close(fd);
+    return -3;
+  }
+  if((write(fd, buf, 7)) != 7) 
+  {
+    sprintf(message,"Error writing to i2c slave");
+    logmessage(logfile,message,loglev,4);
+    close(fd);
+    return -4;
+  }
+  cont=1;
+  close(fd);
+
+  return 1;
+}
+
 
 int read_register(unsigned char reg)
 {
@@ -356,9 +419,12 @@ int read_vector(unsigned char reg, short *xval, short *yval, short *zval)
     }
     else 
     {
-      *xval=(short)(256*buf[0]+buf[1]);
-      *yval=(short)(256*buf[2]+buf[3]);
-      *zval=(short)(256*buf[4]+buf[5]);
+      *xval=((short)(buf[0]))<<8;
+      *xval|=(short)buf[1];
+      *yval=((short)(buf[2]))<<8;
+      *yval|=(short)buf[3];
+      *zval=((short)(buf[4]))<<8;
+      *zval|=(short)buf[5];
       cont=1; 
     }
   }
@@ -387,7 +453,7 @@ void read_temp()
 {
   int temp=0;
 
-  temp=read_register(0x0f);
+  temp=((signed char)(read_register(0x0f))-toffset);
   if(cont==1)
   {
     sprintf(message,"temperature %d",temp);
@@ -577,6 +643,11 @@ int main()
     logmessage(logfile,message,loglev,4); 
   }
 
+  if(write_vector(0x09,&xoffset,&yoffset,&zoffset)!=1)
+  {
+    strcpy(message,"writing offset failed");
+    logmessage(logfile,message,loglev,4); 
+  }
   read_offset();
 
   while(cont==1)
