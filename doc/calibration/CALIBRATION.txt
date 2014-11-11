@@ -1,0 +1,53 @@
+
+The magnetometer offset due to "hard iron" can be determined experimentally.
+First fix the MAG3110 on a wood plate on wooden table far away from any 
+metals and electric currents. Set the MAGINT to 20 s in the configuration
+file and monitor the log file
+
+tail -f /var/log/mag3110d.log 
+
+Rotate the plate around it's vertical axis, for example with 10 degree steps,
+and copy the values from the log file to a new file. See for example the
+file 'calib.txt'.
+
+Plot first the Bx
+
+plot "calib.txt" using 1:2 title 'Bx'
+
+Define a fitting function with good initial guess values for the fitting
+parameters
+
+f(x)=a*sin(b*x+c)+d
+
+a=200;b=0.018;c=0.2;d=-600
+
+and finally fit the data
+
+fit f(x) "calib.txt" using 1:2 via a, b, c, d
+
+The parameter 'd' is the offset due to "hard iron". Multiply this with two
+and write it to the configuration file to OFF_X.
+
+Fit with data above gave following parameters
+
+   Bx          By          Bz
+a  217.428     214.096     27.3025
+b  0.0173648   0.0176216   0.0174427
+c  0.562796    2.08765     2.31957
+d  -574.295    813.472     426.957
+
+
+Files
+-----
+
+calibfitBx.png        - example data fit for Bx
+calibfitBy.png        - example data fit for By
+calibfitBz.png        - example data fit for Bz
+CALIBRATION.txt       - this file
+calib.txt             - magnetometer calibration data
+plotcalib.p           - plot Bx, By, Bz
+plotcalibx.p          - plot and fit Bx
+plotcaliby.p          - plot and fit By
+plotcalibz.p          - plot and fit Bz
+
+
