@@ -456,7 +456,7 @@ void read_temp()
   temp=((signed char)(read_register(0x0f))-toffset);
   if(cont==1)
   {
-    sprintf(message,"temperature %d",temp);
+    sprintf(message,"temperature %+d",temp);
     logmessage(logfile,message,loglev,4);
     write_temp(temp);
   }
