@@ -36,6 +36,32 @@ b  0.0173648   0.0176216   0.0174427
 c  0.562796    2.08765     2.31957
 d  -574.295    813.472     426.957
 
+Using the offset values the same calibration procedure can be repeated. A new
+fit can then be done. This gave the values
+
+   Bx          By          Bz
+a  215.355     216.022     29.3898 
+b  0.0172921   0.0175579   0.0182363
+c  0.523967    2.05018     2.14593
+d  1e-30       1e-30       1e-30
+
+The phase difference between Bx and By is 1.526213 and this is close to the
+pi/2=1.570796327. Thus there is about 3 % error in orthogonality between Bx
+and By. 
+
+In above the Bz has been forced to zero. If the vertical field component 
+needs to be known, the magnetometer needs to be turned first by 90 degrees
+on the wooden plate before the step by step rotation. In this orientation
+the fit result for Bz was
+
+    Bz
+a   216.673
+b   0.0175217
+c   0.452891
+d   849.077
+
+Now 2*d can be used as offset for OFF_Z.
+
 
 Files
 -----
