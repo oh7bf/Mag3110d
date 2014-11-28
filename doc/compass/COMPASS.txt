@@ -1,0 +1,31 @@
+
+After the "hard iron" offset calibration the magnetometer can be used as a
+compass. The magnetometer is fixed on wooden table pointing to magnetic North.
+The data is extracted from the log file with the script 'getfield.pl' and
+plotted to a histogram with gnuplot script 'histfield.p'. The median for
+Bx, By and Bz can be calculated with Octave for example:
+
+data=dlmread('northcalib.txt','',1,2)
+
+plot(data(:,1))
+
+median(data(:,1))
+
+This gave the median values for North direction
+
+Bx[0.1uT]   By[0.1uT]     Bz[0.1uT]      B[0.1uT]
+17+-5       -239+-4       -444+-7        504+-5
+
+The total geomagnetic field B should be between 25 - 65 uT
+(wiki/Earth's_magnetic_field). 
+
+
+
+Files
+-----
+
+COMPASS.txt               - this file
+histfield.p               - gnuplot script for North Bx, By and Bz
+northcalib.png            - histograms of North Bx, By and Bz
+northcalib.txt            - North calibration data
+
