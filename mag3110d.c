@@ -20,13 +20,14 @@
  ****************************************************************************
  *
  * Mon Nov  3 21:20:26 CET 2014
- * Edit: Sun Nov  9 19:14:57 CET 2014
+ * Edit: Fri Nov 28 21:41:29 CET 2014
  *
  * Jaakko Koivuniemi
  **/
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <linux/i2c-dev.h>
 #include <fcntl.h>
 #include <string.h>
@@ -38,15 +39,20 @@
 #include <time.h>
 #include <signal.h>
 
-const int version=20141109; // program version
+const int version=20141128; // program version
 int tempint=0; // temperature reading interval
 int magnint=300; // field reading interval [s]
 
 const char mdatafilex[200]="/var/lib/mag3110d/Bx";
 const char mdatafiley[200]="/var/lib/mag3110d/By";
 const char mdatafilez[200]="/var/lib/mag3110d/Bz";
+const char mdatafile[200]="/var/lib/mag3110d/B";
 
 const char tdatafile[200]="/var/lib/mag3110d/temperature";
+
+const char azdatafile[200]="/var/lib/mag3110d/azimuth";
+const char eldatafile[200]="/var/lib/mag3110d/altitude";
+const char qldatafile[200]="/var/lib/mag3110d/quality";
 
 const char i2cdev[100]="/dev/i2c-1";
 int  address=0x0e;
@@ -61,7 +67,15 @@ const char logfile[200]="/var/log/mag3110d.log";
 char message[200]="";
 
 short Bx=0,By=0,Bz=0; // magnetic field [0.1 uT]
+int B=0; // total magnetic field [0.1 uT]
+short BxN=0,ByN=0,BzN=0; // magnetic vector to North [0.1uT]
+int BN=0; // total magnetic field to North [0.1uT]
 short xoffset=0,yoffset=0,zoffset=0; // magnetic field offset [0.1 uT]
+int compass=0; // calculate compass bearing and elevation
+int quality=0; // quality flag for bearing calculation
+double azimuth=0; // azimuth (bearing) from magnetic North [deg]
+double altitude=0; // altitude (elevation) from horizon [deg]
+double declination=0; // declination between magnetic North and true North
 signed char toffset=0; // temperature offset [C]
 unsigned char ctrlreg1=0; // CTRL_REG1
 unsigned char ctrlreg2=0; // CTRL_REG2
@@ -139,21 +153,54 @@ void read_config()
           }
           if(strncmp(par,"OFF_X",5)==0)
           {
-             xoffset=(int)value;
+             xoffset=(short)value;
              sprintf(message,"X-offset set to %d",(int)value);
              logmessage(logfile,message,loglev,4);
           }
           if(strncmp(par,"OFF_Y",5)==0)
           {
-             yoffset=(int)value;
+             yoffset=(short)value;
              sprintf(message,"Y-offset set to %d",(int)value);
              logmessage(logfile,message,loglev,4);
           }
           if(strncmp(par,"OFF_Z",5)==0)
           {
-             zoffset=(int)value;
+             zoffset=(short)value;
              sprintf(message,"Z-offset set to %d",(int)value);
              logmessage(logfile,message,loglev,4);
+          }
+          if(strncmp(par,"NORTHBX",7)==0)
+          {
+             BxN=(short)value;
+             sprintf(message,"Bx North set to %d",(int)value);
+             logmessage(logfile,message,loglev,4);
+          }
+          if(strncmp(par,"NORTHBY",7)==0)
+          {
+             ByN=(short)value;
+             sprintf(message,"By North set to %d",(int)value);
+             logmessage(logfile,message,loglev,4);
+          }
+          if(strncmp(par,"NORTHBZ",7)==0)
+          {
+             BzN=(short)value;
+             sprintf(message,"Bz North set to %d",(int)value);
+             logmessage(logfile,message,loglev,4);
+          }
+          if(strncmp(par,"DECLINATION",11)==0)
+          {
+             declination=(double)value;
+             sprintf(message,"Declination set to %d",(int)value);
+             logmessage(logfile,message,loglev,4);
+          }
+          if(strncmp(par,"COMPASS",7)==0)
+          {
+             if(value==1)
+             {
+               compass=1;
+               sprintf(message,"Calculate compass bearing");
+               logmessage(logfile,message,loglev,4);
+             }
           }
           if(strncmp(par,"MAGNINT",7)==0)
           {
@@ -188,6 +235,98 @@ void read_config()
     sprintf(message, "Could not open %s", confile);
     logmessage(logfile, message, loglev,4);
   }
+}
+
+// calculate vector spherical coordinates r, theta, phi
+void cart2spher(double x, double y, double z, double *r, double *theta, double *phi)
+{
+  double d=sqrt(x*x+y*y+z*z);
+  *r=d;
+  *theta=acos(z/d);
+  *phi=atan2(y,x);
+  sprintf(message,"Br=%f Btheta=%f Bphi=%f",*r,*theta,*phi);
+  logmessage(logfile,message,loglev,2);
+} 
+
+// write compass data to file
+void write_bearing()
+{
+  FILE *cfile;
+
+  cfile=fopen(azdatafile, "w");
+  if(NULL==cfile)
+  {
+    sprintf(message,"could not write to file: %s",azdatafile);
+    logmessage(logfile,message,loglev,4);
+  }
+  else
+  { 
+    fprintf(cfile,"%-3.0f",azimuth);
+    fclose(cfile);
+  }
+  cfile=fopen(eldatafile, "w");
+  if(NULL==cfile)
+  {
+    sprintf(message,"could not write to file: %s",eldatafile);
+    logmessage(logfile,message,loglev,4);
+  }
+  else
+  { 
+    fprintf(cfile,"%-3.0f",altitude);
+    fclose(cfile);
+  }
+  cfile=fopen(qldatafile, "w");
+  if(NULL==cfile)
+  {
+    sprintf(message,"could not write to file: %s",qldatafile);
+    logmessage(logfile,message,loglev,4);
+  }
+  else
+  { 
+    fprintf(cfile,"%d",quality);
+    fclose(cfile);
+  }
+}
+
+// calculate azimuth or compass bearing, use law of cosines on xy-plane with
+// cross product of reference magnetic North vector and measured magnetic 
+// vector to determine if the angle is between 0 - 180 or 180 - 360
+// tuning of the quality limits may be necessary
+void calc_bearing()
+{
+  double a=0,b=0,c=0,ac=0,alpha=0,B2=0,r=0,theta=0,thetaN=0;
+  int P=0;
+
+  B2=((double)BxN)*((double)BxN)+((double)ByN)*((double)ByN);
+  b=sqrt(B2);
+  B2=((double)Bx)*((double)Bx)+((double)By)*((double)By);
+  c=sqrt(B2);
+  B2=((double)(BxN-Bx))*((double)(BxN-Bx))+((double)(ByN-By))*((double)(ByN-By));
+  a=sqrt(B2);
+  ac=(b*b+c*c-a*a)/(2*b*c);
+  if(ac>1) ac=1;
+  if(ac<-1) ac=-1;
+  alpha=acos(ac);
+
+  P=((int)BxN)*((int)By)-((int)ByN)*((int)Bx);
+  if(P<0) alpha=2*M_PI-alpha;
+  azimuth=(360-180*alpha/M_PI)-declination;
+
+  r=((double)B)/((double)BN);
+  if((r>0.90)&&(r<1.10)) 
+  {
+    r=c/b;
+    if((r<0.5)||(r>1.5)) quality=0; else quality=1; 
+  } 
+  else quality=0;
+
+  thetaN=acos(((double)BzN)/((double)BN));
+  theta=acos(((double)Bz)/((double)B));
+  altitude=180*(theta-thetaN)/M_PI;
+
+  sprintf(message,"azimuth=%-3.0f altitude=%-3.0f quality=%d",azimuth,altitude,quality);
+  logmessage(logfile,message,loglev,4);
+  write_bearing();  
 }
 
 int cont=1; /* main loop flag */
@@ -465,7 +604,6 @@ void read_temp()
 void write_field()
 {
   FILE *mfile;
-
   mfile=fopen(mdatafilex, "w");
   if(NULL==mfile)
   {
@@ -499,16 +637,30 @@ void write_field()
     fprintf(mfile,"%d",Bz);
     fclose(mfile);
   }
+  mfile=fopen(mdatafile, "w");
+  if(NULL==mfile)
+  {
+    sprintf(message,"could not write to file: %s",mdatafile);
+    logmessage(logfile,message,loglev,4);
+  }
+  else
+  { 
+    fprintf(mfile,"%d",B);
+    fclose(mfile);
+  }
 }
 
 void read_field()
 {
-  int ok=0;
+  int ok=0,B2=0;
   ok=read_vector(0x01,&Bx,&By,&Bz);
   if((cont==1)&&(ok==1))
   {
-    sprintf(message,"Bx=%d By=%d Bz=%d",Bx,By,Bz);
+    B2=((int)Bx)*((int)Bx)+((int)By)*((int)By)+((int)Bz)*((int)Bz);
+    B=sqrt(B2);
+    sprintf(message,"Bx=%d By=%d Bz=%d B=%d",Bx,By,Bz,B);
     logmessage(logfile,message,loglev,4);
+
     write_field();
   }
 }
@@ -631,24 +783,44 @@ int main()
     strcpy(message,"reading device id failed, exit"); 
     logmessage(logfile,message,loglev,4);
   }
+  else
+  {
+    if(write_register(0x10,ctrlreg1)!=1)
+    {
+      strcpy(message,"writing CTRL_REG1 failed");
+      logmessage(logfile,message,loglev,4); 
+    }
+    else
+    {
+      if(write_register(0x11,ctrlreg2)!=1)
+      {
+        strcpy(message,"writing CTRL_REG2 failed");
+        logmessage(logfile,message,loglev,4); 
+      }
+      else
+      {
+        if(write_vector(0x09,&xoffset,&yoffset,&zoffset)!=1)
+        {
+          strcpy(message,"writing offset failed");
+          logmessage(logfile,message,loglev,4); 
+        }
+        read_offset();
+      }
+    }
+  }
 
-  if(write_register(0x10,ctrlreg1)!=1)
+  int B2=0;
+  if(compass==1)
   {
-    strcpy(message,"writing CTRL_REG1 failed");
-    logmessage(logfile,message,loglev,4); 
+    B2=((int)BxN)*((int)BxN)+((int)ByN)*((int)ByN)+((int)BzN)*((int)BzN);
+    BN=sqrt(B2);
+    if((BN<200)||(BN>700))
+    {
+      sprintf(message,"total North field BN=%d [0.1uT] ouside of [200,700], dropping compass",BN);
+      logmessage(logfile,message,loglev,4);
+      compass=0;
+    }
   }
-  if(write_register(0x11,ctrlreg2)!=1)
-  {
-    strcpy(message,"writing CTRL_REG2 failed");
-    logmessage(logfile,message,loglev,4); 
-  }
-
-  if(write_vector(0x09,&xoffset,&yoffset,&zoffset)!=1)
-  {
-    strcpy(message,"writing offset failed");
-    logmessage(logfile,message,loglev,4); 
-  }
-  read_offset();
 
   while(cont==1)
   {
@@ -660,6 +832,7 @@ int main()
       write_register(0x10,ctrlreg1|0x02);
       sleep(tdelay);
       read_field();
+      if(compass==1) calc_bearing();
     }
 
     if(((unxs>=nxtemp)||((nxtemp-unxs)>tempint))&&(tempint>10)) 

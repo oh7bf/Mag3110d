@@ -29,6 +29,21 @@ MAGNINT 60
 # delay after trigger before reading [s]
 TDELAY 15
 
+# measured field Bx [0.1uT] when compass points to North
+#NORTHBX 17
+
+# measured field By [0.1uT] when compass points to North
+#NORTHBY -239
+
+# measured field Bz [0.1uT] when compass points to North
+#NORTHBZ -444
+
+# calculate compass bearing and elevation
+# COMPASS 1
+
+# declination between true North and magnetic North
+# DECLINATION 0
+
 # temperature reading interval [s]
 TEMPINT 300
 

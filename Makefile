@@ -9,7 +9,7 @@
 CXX           = gcc
 CXXFLAGS      = -g -O -Wall 
 LD            = gcc
-LDFLAGS       = -O
+LDFLAGS       = -lm -O
 
 %.o : %.c
 	$(CXX) $(CXXFLAGS) -c $<
