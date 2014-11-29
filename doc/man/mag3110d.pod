@@ -19,6 +19,22 @@ B<service> I<mag3110d> I<stop>
 
 The operation of the daemon can be checked from the log file.
 
+The magnetometer reading needs to be corrected for the hard iron offset. 
+The offset values are written to the configuration file parameters
+I<OFF_X>, I<OFF_Y> and I<OFF_Z>. After offset correction the measured
+Earth's magnetic field should be between 25 and 65 uT. 
+
+2D compass bearing can be calculated too. First the magnetometer
+is pointed to magnetic North and the corresponding magnetic vector 
+(Bx,By,Bz) is measured. This vector is written to the configuration file
+in parameters I<NORTHBX>, I<NORTHBY> and I<NORTHBZ>. The declination
+between magnetic North and true North can be corrected with the 
+I<DECLINATION> parameter. The quality of the calculated compass bearing
+is estimated by comparing the North calibration magnetic vector magnitude
+to the measured magnetic vector magnitude. In addition the size of the
+horizontal component is calculated to see if this value is low due to tilting
+of the magnetometer. 
+
 =head1 FILES
 
 I</etc/mag3110d_config>             Configuration file. 
@@ -28,6 +44,14 @@ I</etc/logrotate.d/mag3110d>        Log rotation configuration file.
 I</etc/init.d/mag3110d>             Init script.
 
 I</usr/sbin/mag3110d>               Daemon code.
+
+I</var/lib/mag3110d/altitude>       Live elevation in degrees.
+
+I</var/lib/mag3110d/azimuth>        Live compass bearing in degrees.
+
+I</var/lib/mag3110d/quality>        Quality flag for the compass bearing.
+
+I</var/lib/mag3110d/B>              Live total field.
 
 I</var/lib/mag3110d/Bx>             Live field x component.
 
@@ -40,6 +64,54 @@ I</var/lib/mag3110d/temperature>    Live temperature value.
 I</var/log/mag3110d.log>            Log file.
 
 I</var/run/mag3110d.pid>            PID file.
+
+The configuration file can have following parameters.
+
+I<COMPASS>
+If set calculate compass bearing and elevation.
+
+I<CTRL_REG1>
+Initial value for CTRL_REG1. 
+
+I<CTRL_REG2>
+Initial value for CTRL_REG2.
+
+I<DECLINATION>
+Declination between true North and magnetic North in degrees.
+
+I<LOGLEVEL>
+Log level 0=debug messages, 1=system commands, 2=operation messages, 
+3=status messages and 4=errors/warnings.
+
+I<MAGNINT>
+Magnetic field reading interval in seconds.
+
+I<NORTHBX>
+Measured field Bx [0.1uT] when compass points to North.
+
+I<NORTHBY>
+Measured field By [0.1uT] when compass points to North.
+
+I<NORTHBZ>
+Measured field Bz [0.1uT] when compass points to North.
+
+I<OFF_X>
+Bx offset -10000 - +10000.
+
+I<OFF_Y>
+By offset -10000 - +10000.
+
+I<OFF_Z>
+Bz offset -10000 - +10000.
+
+I<TDELAY>
+Delay in seconds after trigger for measurement before the magnetometer is read.
+
+I<TEMPINT>
+Temperature reading interval in seconds.
+
+I<TOFFSET>
+Temperature offset.
 
 =head1 WARNING
 

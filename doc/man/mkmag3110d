@@ -1,2 +1,2 @@
 #!/bin/bash
-pod2man -c "Raspberry Pi" -r "version 20141108" mag3110d.pod mag3110d.1
+pod2man -c "Raspberry Pi" -r "version 20141129" mag3110d.pod mag3110d.1
