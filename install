@@ -7,7 +7,7 @@
 #
 # a) make
 # 
-# b) cd doc; ./mkmag3110d
+# b) cd doc/man/; ./mkmag3110d
 # 
 # c) sudo ./install (this script)
 #
@@ -30,7 +30,7 @@
 # /var/lib/mag3110d/                  - live field data
 #
 # Sat Nov  8 17:29:20 CET 2014
-# Edit: Thu Feb 12 22:04:11 CET 2015
+# Edit: Thu Feb 12 22:11:38 CET 2015
 # 
 # Jaakko Koivuniemi
 #
