@@ -11,7 +11,7 @@
 # 
 # c) sudo ./install (this script)
 #
-# d) sudo modprobe i2c-bcm2708; sudo modprobe i2c-dev
+# d) sudo raspi-config (to enable I2C) 
 #
 # e) sudo service mag3110d start
 # 
@@ -25,11 +25,12 @@
 # /etc/init.d/mag3110d                - init script
 # /etc/logrotate.d/mag3110d           - log rotation file
 # /etc/mag3110d_config                - configuration file
-# /usr/share/man                      - manual pages
+# /usr/share/man/man1/mag3110d.1      - manual page
 # /usr/sbin/mag3110d                  - field reading daemon
+# /var/lib/mag3110d/                  - live field data
 #
 # Sat Nov  8 17:29:20 CET 2014
-# Edit: 
+# Edit: Thu Feb 12 22:04:11 CET 2015
 # 
 # Jaakko Koivuniemi
 #
@@ -48,9 +49,6 @@ MANDIR=/usr/share/man/man1
 
 # mag3110d.log log rotation  
 LOGROTADIR=/etc/logrotate.d
-
-# automatic loading of modules
-MODPROBEDIR=/etc/modprobe.d
 
 # init script
 INITDIR=/etc/init.d
@@ -118,32 +116,6 @@ if [ -d /var/lib/mag3110d ]; then
 else
   echo "Create directory /var/lib/mag3110d"
   /bin/mkdir -m 775 /var/lib/mag3110d
-fi
-
-if /bin/grep -Fxq "i2c-bcm2708" /etc/modules
-then
-  echo "i2c-bcm2708 found from /etc/modules"
-else
-  echo "Add i2c-bcm2708 to /etc/modules"
-  echo "i2c-bcm2708" >> /etc/modules
-fi
-
-if /bin/grep -Fxq "i2c-dev" /etc/modules
-then
-  echo "i2c-dev found from /etc/modules"
-else
-  echo "Add i2c-dev to /etc/modules"
-  echo "i2c-dev" >> /etc/modules
-fi
-
-if /bin/grep -Fxq "#blacklist i2c-bcm2708" /etc/modprobe.d/raspi-blacklist.conf
-then
-  echo "black listing of i2c-bcm2708 already removed"
-else
-  echo "remove black listing of i2c-bcm2708"
-  /bin/cp /etc/modprobe.d/raspi-blacklist.conf /etc/modprobe.d/raspi-blacklist.conf.old
-  /bin/sed "s/blacklist i2c-bcm2708/#blacklist i2c-bcm2708/g" /etc/modprobe.d/raspi-blacklist.conf > /etc/modprobe.d/raspi-blacklist.conf.new
-  /bin/mv /etc/modprobe.d/raspi-blacklist.conf.new /etc/modprobe.d/raspi-blacklist.conf 
 fi
 
 echo "Run 'update-rc.d mag3110d defaults' to automatically start at boot time"
