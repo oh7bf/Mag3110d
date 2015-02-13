@@ -2,7 +2,7 @@
  * 
  * Read magnetic field from MAG3110 chip with I2C and write it to a log file. 
  *       
- * Copyright (C) 2014 Jaakko Koivuniemi.
+ * Copyright (C) 2014 - 2015 Jaakko Koivuniemi.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  ****************************************************************************
  *
  * Mon Nov  3 21:20:26 CET 2014
- * Edit: Fri Nov 28 21:41:29 CET 2014
+ * Edit: Fri Feb 13 18:17:50 CET 2015
  *
  * Jaakko Koivuniemi
  **/
@@ -39,7 +39,7 @@
 #include <time.h>
 #include <signal.h>
 
-const int version=20141128; // program version
+const int version=20150213; // program version
 int tempint=0; // temperature reading interval
 int magnint=300; // field reading interval [s]
 
@@ -71,7 +71,7 @@ int B=0; // total magnetic field [0.1 uT]
 short BxN=0,ByN=0,BzN=0; // magnetic vector to North [0.1uT]
 int BN=0; // total magnetic field to North [0.1uT]
 short xoffset=0,yoffset=0,zoffset=0; // magnetic field offset [0.1 uT]
-int compass=0; // calculate compass bearing and elevation
+int compass=0; // 1=calculate compass bearing and elevation, 2=bearing only
 int quality=0; // quality flag for bearing calculation
 double azimuth=0; // azimuth (bearing) from magnetic North [deg]
 double altitude=0; // altitude (elevation) from horizon [deg]
@@ -325,6 +325,24 @@ void calc_bearing()
   altitude=180*(theta-thetaN)/M_PI;
 
   sprintf(message,"azimuth=%-3.0f altitude=%-3.0f quality=%d",azimuth,altitude,quality);
+  logmessage(logfile,message,loglev,4);
+  write_bearing();  
+}
+
+// simple compass bearing from Bx and By
+void calc_bearing_only()
+{
+  double alpha=0;
+  alpha=atan2(Bx,By);
+  if(alpha<0) alpha+=2*M_PI;
+  azimuth=180*alpha/M_PI-declination;
+  if(azimuth>=360) azimuth-=360;
+  altitude=0;
+
+  if((B<200)||(B>700)) quality=0;
+  else quality=1;
+
+  sprintf(message,"azimuth=%-3.0f quality=%d",azimuth,quality);
   logmessage(logfile,message,loglev,4);
   write_bearing();  
 }
@@ -814,7 +832,13 @@ int main()
   {
     B2=((int)BxN)*((int)BxN)+((int)ByN)*((int)ByN)+((int)BzN)*((int)BzN);
     BN=sqrt(B2);
-    if((BN<200)||(BN>700))
+    if(BN==0)
+    {
+      sprintf(message,"North vector not defined, calculate only compass bearing");
+      logmessage(logfile,message,loglev,4);
+      compass=2;
+    }
+    else if((BN<200)||(BN>700))
     {
       sprintf(message,"total North field BN=%d [0.1uT] ouside of [200,700], dropping compass",BN);
       logmessage(logfile,message,loglev,4);
@@ -833,6 +857,7 @@ int main()
       sleep(tdelay);
       read_field();
       if(compass==1) calc_bearing();
+      else if(compass==2) calc_bearing_only();
     }
 
     if(((unxs>=nxtemp)||((nxtemp-unxs)>tempint))&&(tempint>10)) 
